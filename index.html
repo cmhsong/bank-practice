@@ -262,7 +262,11 @@ SC.sav0=()=>({title:'적금이 뭐예요?',back:'home',guide:'적금은 매달 �
   <p class="tip">지금 내 돈: <b>${won(S.account.balance)}</b> · 연습 이자: 1년에 ${SAV_RATE*100}%</p>${nextBtn('sav1','적금 만들기 시작')}`});
 SC.sav1=()=>{const b=S.account.balance;return{title:'매달 얼마씩?',back:'sav0',step:1,total:5,guide:b<10000?'내 돈이 부족해요. 먼저 돈을 넣어요.':'매달 얼마씩 모을지 골라요. 오늘 첫 번째 돈이 통장에서 나가요.',
   body:[10000,30000,50000,100000].map(v=>opt('amount',v,'sav2','💵','매달 '+won(v),v>b?'내 돈이 부족해요':'',v>b)).join('')
+  +`<button class="opt" data-act="start2" data-to="sav1c"><span class="em">✏️</span><span>직접 쓰기<small>모을 돈을 숫자로 직접 눌러요</small></span></button>`
   +(b<10000?`<button class="btn next" data-act="start" data-to="dep1">💰 돈 넣으러 가기</button>`:'')}};
+SC.sav1c=()=>{const a=F.amount||0,b=S.account.balance;const err=a>b?`내 돈이 부족해요. 지금 내 돈은 ${won(b)}이에요.`:(a>0&&a<1000?'1,000원부터 모을 수 있어요.':'');
+  return{title:'매달 얼마씩? (직접 쓰기)',back:'sav1',step:1,total:5,guide:'매달 모을 돈을 숫자로 눌러요. 오늘 첫 번째 돈이 통장에서 나가요.',
+  body:`<p class="tip">내 돈: <b>${won(b)}</b> · 1,000원부터 모을 수 있어요.</p>`+amountUI(err)+nextBtn('sav2','다음',!a||!!err)}};
 SC.sav2=()=>({title:'몇 달 동안?',back:'sav1',step:2,total:5,guide:'몇 달 동안 모을지 골라요.',
   body:[6,12,24].map(n=>opt('months',n,'sav3','📅',n+'개월',`다 모으면 ${won(F.amount*n)} + 이자 ${won(savInterest(F.amount,n))}`)).join('')});
 SC.sav3=()=>({title:'매달 며칠에?',back:'sav2',step:3,total:5,guide:'매달 며칠에 돈이 나갈지 골라요. 그날 통장에서 저절로 나가요.',
