@@ -98,7 +98,7 @@ table.cf tr:last-child td{border-bottom:0}
 <script>
 // ===== 저장 =====
 const KEY='practiceBank.v1';
-const def=()=>({name:'',account:null,products:[],history:[],settings:{voice:true,hint:true},done:{},month:0,salary:null,autopays:[]});
+const def=()=>({name:'',account:null,products:[],history:[],settings:{voice:true,hint:true},done:{},month:0,salary:null,autopays:[],jobs:null});
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.settings)return Object.assign(def(),s)}catch(e){}return def()}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
 let S=load(),V='home',F={},lastGuide='';
@@ -131,6 +131,7 @@ const JOBS=[
  {job:'도서관 정리 도우미',em:'📚',amount:800000},
  {job:'마트 정리 직원',em:'🛒',amount:1000000}
 ];
+const jobs=()=>S.jobs&&S.jobs.length?S.jobs:JOBS;
 const BILLS=[
  {name:'휴대폰 요금',em:'📱',amount:35000},
  {name:'교통카드 요금',em:'🚌',amount:20000},
@@ -294,7 +295,7 @@ SC.sal0=()=>({title:'월급이 뭐예요?',back:'home',guide:S.salary?`지금 ${
   body:`<div class="card" style="text-align:center;font-size:1.1rem">💼<br>일터에서 <b>일을 해요</b><br>⬇️<br>매달 월급날에 <b>월급</b>이 통장에 들어와요<br>⬇️<br>월급으로 요금도 내고 저축도 해요</div>`
   +(S.salary?`<p class="tip">내 일터: <b>${S.salary.em} ${S.salary.job}</b> · 월급: <b>${won(S.salary.amount)}</b> · 월급날: 매달 25일</p>${nextBtn('month','⏩ 한 달 뒤로 가서 월급 받기')}<button class="btn ghost" data-act="go" data-to="sal1">일터 바꾸기</button>`:nextBtn('sal1','일터 고르기'))});
 SC.sal1=()=>({title:'어디에서 일할까요?',back:'sal0',step:1,total:2,guide:'일할 곳을 골라요. 연습이라서 진짜 일터는 아니에요.',
-  body:JOBS.map((j,i)=>`<button class="opt" data-act="pickJob" data-i="${i}"><span class="em">${j.em}</span><span>${j.job}<small>월급 ${won(j.amount)} (${kor(j.amount)} 원)</small></span></button>`).join('')});
+  body:jobs().map((j,i)=>`<button class="opt" data-act="pickJob" data-i="${i}"><span class="em">${j.em}</span><span>${j.job}<small>월급 ${won(j.amount)} (${kor(j.amount)} 원)</small></span></button>`).join('')+`<button class="btn ghost sm" data-act="editJobs">✏️ 일터 이름·월급 고치기 (선생님)</button>`});
 SC.sal2=()=>({title:'월급 통장 확인',back:'sal1',step:2,total:2,guide:`${F.job.job} 일을 하고, 매달 ${won(F.job.amount)}을 내 통장으로 받아요. 맞으면 일 시작하기를 눌러요.`,
   body:rows([['일터',F.job.em+' '+F.job.job],['월급',won(F.job.amount)],['월급날','매달 25일'],['월급 받는 통장','내 연습통장']])
   +`<p class="tip">💡 월급은 내 이름으로 된 내 통장으로 받아요. 다른 사람 통장으로 받지 않아요.</p><button class="btn next" data-act="doSalary">일 시작하기</button>`});
@@ -353,9 +354,21 @@ SC.settings=()=>({title:'설정 (선생님)',back:'home',guide:'',
   body:`<button class="chk ${S.settings.voice?'on':''}" data-act="set" data-f="voice"><i>✓</i>🔊 안내 말 읽어 주기</button>
   <button class="chk ${S.settings.hint?'on':''}" data-act="set" data-f="hint"><i>✓</i>✨ 누를 단추 반짝이기 (힌트)</button>
   ${S.account?`<button class="btn ghost sm" data-act="tog" data-f="showPin">${F.showPin?'비밀번호: '+S.account.pin:'학생 비밀번호 보기'}</button>`:''}
+  <button class="btn ghost sm" data-act="editJobs">💼 일터 이름·월급 고치기</button>
   <p class="tip">이 기기의 브라우저에만 저장돼요. 학생 한 명이 기기 한 대를 쓰거나, 학생이 바뀔 때 아래 단추로 처음부터 다시 시작하세요.<br>힌트를 끄면 스스로 하는 연습(평가)에 쓸 수 있어요.</p>
   <button class="btn ghost sm" data-act="resetMissions">미션만 처음부터 다시</button>
   <button class="btn red sm" data-act="go" data-to="reset1">모두 지우고 처음부터 다시</button>`});
+const korAmt=v=>{const n=Number(digits(v));return n?won(n)+' ('+kor(n)+' 원)':'월급을 숫자로 써요'};
+SC.jobsEdit=()=>({title:'일터 고치기 (선생님)',back:'settings',guide:'',
+  body:`<p class="tip">학생이 "월급 받기"에서 고르는 일터의 이름과 월급을 바꿀 수 있어요. 실습처나 취업처 이름을 넣어 보세요.</p>`
+  +F.draft.map((j,i)=>`<div class="card"><b>일터 ${i+1}</b>
+   <input type="text" data-jf="job" data-i="${i}" maxlength="15" placeholder="일터 이름" value="${esc(j.job)}" autocomplete="off" style="margin:8px 0;font-size:1.15rem">
+   <input type="text" data-jf="amount" data-i="${i}" inputmode="numeric" maxlength="9" placeholder="월급 (숫자만)" value="${esc(j.amount)}" autocomplete="off" style="font-size:1.15rem">
+   <div class="kor" style="text-align:center;color:var(--sub);margin-top:6px">${korAmt(j.amount)}</div>
+   ${F.draft.length>1?`<button class="btn ghost sm" style="margin-top:8px" data-act="jobDel" data-i="${i}">이 일터 지우기</button>`:''}</div>`).join('')
+  +(F.err?`<p class="err">${F.err}</p>`:'')
+  +(F.draft.length<6?`<button class="btn ghost sm" data-act="jobAdd">＋ 일터 추가</button>`:'')
+  +`<button class="btn" data-act="jobSave">저장</button><button class="btn ghost sm" data-act="jobDefault">처음 값으로 되돌리기</button>`});
 SC.reset1=()=>({title:'모두 지우기',back:'settings',guide:'계좌와 돈, 미션이 모두 지워져요. 정말 지울까요?',
   body:`<button class="btn ghost" data-act="go" data-to="settings">아니요</button><button class="btn red" data-act="doReset">네, 모두 지워요</button>`});
 
@@ -405,7 +418,17 @@ const A={
    F.found=false;render(false);speak(F.err)},
  unfind:()=>{F.found=false;F.accno='';render()},
  nextMonth:()=>{F.msgs=runMonth();if(V==='prods')render(false);else go('month',false);speak(F.msgs.join(' '))},
- pickJob:d=>{F.job=JOBS[d.i];go('sal2')},
+ editJobs:()=>{F={draft:jobs().map((j,i)=>({job:j.job,em:j.em,amount:String(j.amount),orig:i}))};go('jobsEdit')},
+ jobAdd:()=>{F.draft.push({job:'',em:'💼',amount:'',orig:-1});F.err='';render(false)},
+ jobDel:d=>{F.draft.splice(Number(d.i),1);F.err='';render(false)},
+ jobDefault:()=>{S.jobs=null;toast('처음 값으로 되돌렸어요');A.editJobs()},
+ jobSave:()=>{const nw=F.draft.map(j=>({job:String(j.job).replace(/[<>&"']/g,'').trim().slice(0,15),em:j.em||'💼',amount:Number(digits(j.amount))}));
+   const bad=nw.findIndex(j=>!j.job||!j.amount);
+   if(bad>=0){F.err=`일터 ${bad+1}: 이름과 월급(숫자)을 모두 써 주세요.`;render(false);return}
+   if(new Set(nw.map(j=>j.job)).size<nw.length){F.err='같은 이름의 일터가 있어요. 이름을 다르게 써 주세요.';render(false);return}
+   const cur=S.salary?jobs().findIndex(j=>j.job===S.salary.job):-1,k=cur>=0?F.draft.findIndex(j=>j.orig===cur):-1;
+   S.jobs=nw;if(k>=0)S.salary=nw[k];toast('저장했어요');F={};go('settings')},
+ pickJob:d=>{F.job=jobs()[d.i];go('sal2')},
  doSalary:()=>{S.salary=F.job;emit({type:'salarySet'});go('sal3')},
  pickBill:d=>{F.bill=BILLS[d.i];go('ap2')},
  apStop:d=>{S.autopays=S.autopays.filter(a=>a.id!==Number(d.id));toast('자동납부를 그만뒀어요');render(false)},
@@ -415,10 +438,11 @@ const A={
  quizNext:()=>{F.q=(F.q||0)+1;if(F.q>=QUIZ.length){emit({type:'quiz'});go('quizDone')}else go('quiz')},
  set:d=>{S.settings[d.f]=!S.settings[d.f];save();render(false)},
  resetMissions:()=>{S.done={};if(S.account)S.done.m1=true;save();toast('미션을 처음부터 다시 해요');render(false)},
- doReset:()=>{const st=S.settings;S=def();S.settings=st;save();F={};go('home')}
+ doReset:()=>{const st=S.settings,jb=S.jobs;S=def();S.settings=st;S.jobs=jb;save();F={};go('home')}
 };
 app.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const f=A[b.dataset.act];if(f){f(b.dataset);save()}});
-app.addEventListener('input',e=>{const f=e.target.dataset.f;if(f)F[f]=e.target.value});
+app.addEventListener('input',e=>{const f=e.target.dataset.f;if(f)F[f]=e.target.value;
+  const jf=e.target.dataset.jf;if(jf&&F.draft){F.draft[e.target.dataset.i][jf]=e.target.value;if(jf==='amount'){const k=e.target.parentNode.querySelector('.kor');if(k)k.textContent=korAmt(e.target.value)}}});
 render(false);
 </script>
 </body>
