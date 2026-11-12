@@ -131,11 +131,11 @@ const digits=s=>String(s||'').replace(/\D/g,'');
 // ===== 연습용 데이터 (모두 지어낸 이름과 은행) =====
 const BANKS=['연습은행','하늘은행','바다은행','나무은행'];
 const PEOPLE=[
- {nick:'엄마',name:'김영희',bank:'하늘은행',no:'1234-5678',em:'👩'},
- {nick:'아빠',name:'박철수',bank:'나무은행',no:'2222-3333',em:'👨'},
- {nick:'친구 민수',name:'김민수',bank:'바다은행',no:'2468-1357',em:'🧑'},
- {nick:'선생님',name:'이수진',bank:'연습은행',no:'5555-1004',em:'🧑‍🏫'},
- {nick:'분식집',name:'맛나분식',bank:'하늘은행',no:'7777-8888',em:'🍜'}
+ {nick:'엄마',name:'김영희',bank:'하늘은행',no:'302-145-678901',em:'👩'},
+ {nick:'아빠',name:'박철수',bank:'나무은행',no:'123-4567-8901-23',em:'👨'},
+ {nick:'친구 민수',name:'김민수',bank:'바다은행',no:'246813-57-902468',em:'🧑'},
+ {nick:'선생님',name:'이수진',bank:'연습은행',no:'1004-5555-1234',em:'🧑‍🏫'},
+ {nick:'분식집',name:'맛나분식',bank:'하늘은행',no:'377-888-123456',em:'🍜'}
 ];
 const JOBS=[
  {job:'카페 도우미',em:'☕',amount:500000},
@@ -151,14 +151,20 @@ const BILLS=[
 ];
 const SUR=['김','이','박','최','정','강','조','윤','장','임'];
 const GIV=['서연','민준','지우','하준','수아','도윤','예은','시우','지민','현우','다은','준서','채원','건우','소율','우진','하은','선우','유나','지호','서윤','태윤','가은','은우','나연'];
-const ACCTS=Array.from({length:50},(_,i)=>{const name=SUR[i%10]+GIV[i%25];return{nick:name,name,bank:BANKS[i%4],no:(1001+i*173)+'-'+((i*7919+2468)%9000+1000),em:'👤'}});
+// 은행마다 계좌번호 모양이 달라요 (모두 지어낸 번호)
+function acctNo(bank,seed){let x=seed*7919,d='';while(d.length<14){x=x*48271%2147483647;d+=String(x%10)}d=d.replace(/^0/,'1');
+  return bank==='연습은행'?'1004-'+d.slice(0,4)+'-'+d.slice(4,8)
+   :bank==='하늘은행'?'3'+d.slice(0,2)+'-'+d.slice(2,5)+'-'+d.slice(5,11)
+   :bank==='바다은행'?d.slice(0,6)+'-'+d.slice(6,8)+'-'+d.slice(8,14)
+   :d.slice(0,3)+'-'+d.slice(3,7)+'-'+d.slice(7,11)+'-'+d.slice(11,13)}
+const ACCTS=Array.from({length:50},(_,i)=>{const name=SUR[i%10]+GIV[i%25];return{nick:name,name,bank:BANKS[i%4],no:acctNo(BANKS[i%4],i+1),em:'👤'}});
 const ALL=PEOPLE.concat(ACCTS);
 const SAV_RATE=0.03,DP_RATE=0.025;
 const MISSIONS=[
  {id:'m1',go:'open1',t:'내 계좌 만들기',test:e=>e.type==='open'},
  {id:'m2',go:'dep1',t:'내 통장에 10,000원 넣기',test:e=>e.type==='deposit'&&e.amount===10000},
  {id:'m3',go:'send1',t:'엄마에게 5,000원 이체하기',test:e=>e.type==='send'&&e.nick==='엄마'&&e.amount===5000},
- {id:'m4',go:'send1',t:'계좌번호를 직접 써서 김민수(바다은행 2468-1357)에게 3,000원 이체하기',test:e=>e.type==='send'&&e.name==='김민수'&&e.amount===3000&&e.direct},
+ {id:'m4',go:'send1',t:'계좌번호를 직접 써서 김민수(바다은행 246813-57-902468)에게 3,000원 이체하기',test:e=>e.type==='send'&&e.name==='김민수'&&e.amount===3000&&e.direct},
  {id:'m5',go:'hist',t:'거래 내역 확인하기',test:e=>e.type==='hist'},
  {id:'m6',go:'sav0',t:'매달 10,000원씩 6개월 적금 만들기',test:e=>e.type==='saving'&&e.amount===10000&&e.months===6},
  {id:'m7',go:'dp0',t:'30,000원을 12개월 예금에 맡기기',test:e=>e.type==='fixed'&&e.amount===30000&&e.months===12},
@@ -260,7 +266,7 @@ SC.send1b=()=>{const sm=ALL[F.sample];return{title:'계좌번호 쓰기',back:'s
   body:(!F.found&&sm?`<div class="mis" style="margin:0;text-align:center">📝 연습 쪽지 (이 계좌를 보고 써요)<br><span style="font-size:1.3rem">${sm.bank} ${sm.no}</span><br>받는 사람: ${sm.name}
    <div class="row2" style="margin-top:8px"><button class="btn white sm" data-act="shuffle">🔀 다른 계좌</button><button class="btn white sm" data-act="go" data-to="accts">📋 계좌 목록</button></div></div>`:'')
   +`<b>① 은행 고르기</b><div class="grid">${BANKS.map(b=>`<button class="opt ${F.bank===b?'sel':''}" data-act="pick" data-f="bank" data-v="${b}" data-to="">🏦 ${b}</button>`).join('')}</div>
-  <b>② 계좌번호 쓰기</b><input type="text" data-f="accno" inputmode="numeric" maxlength="12" placeholder="계좌번호 숫자" value="${esc(F.accno||'')}" autocomplete="off">
+  <b>② 계좌번호 쓰기</b> <small>( - 는 안 써도 돼요)</small><input type="text" data-f="accno" inputmode="numeric" maxlength="20" placeholder="계좌번호 숫자" style="font-size:1.25rem" value="${esc(F.accno||'')}" autocomplete="off">
   ${F.err?`<p class="err">${F.err}</p>`:''}
   ${F.found?`<div class="card" style="text-align:center">받는 사람<br><b style="font-size:1.5rem">${F.to.name} 님</b><br><small>${F.to.bank} ${F.to.no}</small></div>${nextBtn('send2','맞아요, 다음')}<button class="btn ghost sm" data-act="unfind">다시 쓰기</button>`
   :`<button class="btn next" data-act="lookup">③ 찾기</button>`}`}};
