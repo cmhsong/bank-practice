@@ -205,7 +205,8 @@ SC.home=()=>{
     <div class="money">${won(S.account.balance)}</div>
     <div class="row2"><button class="btn white ${hl('dep1')}" data-act="start" data-to="dep1">💰 돈 넣기</button><button class="btn white ${hl('send1')}" data-act="start" data-to="send1">📤 이체하기</button></div></div>
     <div class="grid">${tile('sav0','🐷','적금 만들기')}${tile('dp0','🔒','예금 만들기')}${tile('sal0','💼','월급 받기')}${tile('ap0','📱','자동납부')}${tile('month','⏩','한 달 뒤로 가기')}${tile('hist','📒','거래 내역')}${tile('prods','📂','내 적금·예금')}${tile('missions','⭐','미션 보기')}${tile('quiz','🛡️','안전 퀴즈')}</div>
-    <button class="btn ghost sm" data-act="start" data-to="settings">⚙️ 설정 (선생님)</button>`}};
+    <button class="btn ghost sm" data-act="start" data-to="settings">⚙️ 설정 (선생님)</button>
+    <button class="btn ghost sm" data-act="resetAsk">🔄 초기화 (처음부터 다시)</button>`}};
 
 // --- 계좌 만들기 ---
 SC.open1=()=>({title:'계좌 만들기',back:'home',step:1,total:5,guide:'이름을 써요. 다 쓰면 다음을 눌러요.',
@@ -388,7 +389,7 @@ SC.settings=()=>({title:'설정 (선생님)',back:'home',guide:'',
   <button class="btn ghost sm" data-act="editJobs">💼 일터 이름·월급 고치기</button>
   <p class="tip">이 기기의 브라우저에만 저장돼요. 학생 한 명이 기기 한 대를 쓰거나, 학생이 바뀔 때 아래 단추로 처음부터 다시 시작하세요.<br>힌트를 끄면 스스로 하는 연습(평가)에 쓸 수 있어요.</p>
   <button class="btn ghost sm" data-act="resetMissions">미션만 처음부터 다시</button>
-  <button class="btn red sm" data-act="go" data-to="reset1">모두 지우고 처음부터 다시</button>`});
+  <button class="btn red sm" data-act="go" data-to="reset1">🔄 초기화 (모두 지우고 처음부터 다시)</button>`});
 const korAmt=(v,empty='월급을 숫자로 써요')=>{const n=Number(digits(v));return n?won(n)+' ('+kor(n)+' 원)':empty};
 SC.jobsEdit=()=>({title:'일터 고치기 (선생님)',back:'settings',guide:'',
   body:`<p class="tip">학생이 "월급 받기"에서 고르는 일터의 이름과 월급을 바꿀 수 있어요. 실습처나 취업처 이름을 넣어 보세요.</p>`
@@ -400,8 +401,9 @@ SC.jobsEdit=()=>({title:'일터 고치기 (선생님)',back:'settings',guide:'',
   +(F.err?`<p class="err">${F.err}</p>`:'')
   +(F.draft.length<6?`<button class="btn ghost sm" data-act="jobAdd">＋ 일터 추가</button>`:'')
   +`<button class="btn" data-act="jobSave">저장</button><button class="btn ghost sm" data-act="jobDefault">처음 값으로 되돌리기</button>`});
-SC.reset1=()=>({title:'모두 지우기',back:'settings',guide:'계좌와 돈, 미션이 모두 지워져요. 정말 지울까요?',
-  body:`<button class="btn ghost" data-act="go" data-to="settings">아니요</button><button class="btn red" data-act="doReset">네, 모두 지워요</button>`});
+SC.reset1=()=>{const b=F.rb||'settings';return{title:'초기화',back:b,guide:'초기화하면 계좌와 돈, 적금, 예금, 월급, 자동납부, 미션이 모두 지워져요. 정말 처음부터 다시 할까요?',
+  body:`<div class="hero"><div class="big">🔄</div><p>지우면 되돌릴 수 없어요.</p></div>
+  <button class="btn ghost next" data-act="go" data-to="${b}">아니요, 그대로 둘래요</button><button class="btn red" data-act="doReset">네, 처음부터 다시 해요</button>`}};
 
 // ===== 동작 =====
 function auth(p,ok){if(p===S.account.pin){F.pinFail=0;F.pinMsg='';ok()}else{F.pinFail=(F.pinFail||0)+1;F.pinMsg='비밀번호가 달라요. 다시 눌러 보세요.';render(false);speak(F.pinMsg)}}
@@ -473,6 +475,7 @@ const A={
    else if(!amount)F.err='내는 돈을 숫자로 써 주세요.';else if(amount>9999999)F.err='돈이 너무 커요. 다시 써 주세요.';
    else{F.err='';const b=BILLS.find(x=>x.name===name);F.bill={name,em:b?b.em:'🧾',amount};go('ap2');return}
    render(false);speak(F.err)},
+ resetAsk:()=>{F={rb:'home'};go('reset1')},
  pickJob:d=>{F.job=jobs()[d.i];go('sal2')},
  doSalary:()=>{S.salary=F.job;emit({type:'salarySet'});go('sal3')},
  pickBill:d=>{F.bill=BILLS[d.i];go('ap2')},
