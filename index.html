@@ -293,9 +293,17 @@ SC.dp5=()=>({title:'예금 완성',guide:'예금을 만들었어요! 약속한 �
 // --- 월급 ---
 SC.sal0=()=>({title:'월급이 뭐예요?',back:'home',guide:S.salary?`지금 ${S.salary.job} 일을 해요. 매달 월급 ${won(S.salary.amount)}이 통장에 들어와요.`:'일을 하면 매달 월급을 받아요. 월급은 내 통장으로 들어와요.',
   body:`<div class="card" style="text-align:center;font-size:1.1rem">💼<br>일터에서 <b>일을 해요</b><br>⬇️<br>매달 월급날에 <b>월급</b>이 통장에 들어와요<br>⬇️<br>월급으로 요금도 내고 저축도 해요</div>`
-  +(S.salary?`<p class="tip">내 일터: <b>${S.salary.em} ${S.salary.job}</b> · 월급: <b>${won(S.salary.amount)}</b> · 월급날: 매달 25일</p>${nextBtn('month','⏩ 한 달 뒤로 가서 월급 받기')}<button class="btn ghost" data-act="go" data-to="sal1">일터 바꾸기</button>`:nextBtn('sal1','일터 고르기'))});
+  +(S.salary?`<p class="tip">내 일터: <b>${S.salary.em} ${S.salary.job}</b> · 월급: <b>${won(S.salary.amount)}</b> · 월급날: 매달 25일</p>${nextBtn('month','⏩ 한 달 뒤로 가서 월급 받기')}<button class="btn ghost" data-act="customStart">✏️ 직장 이름·월급 고치기</button><button class="btn ghost" data-act="go" data-to="sal1">다른 일터 고르기</button>`:nextBtn('sal1','일터 고르기'))});
 SC.sal1=()=>({title:'어디에서 일할까요?',back:'sal0',step:1,total:2,guide:'일할 곳을 골라요. 연습이라서 진짜 일터는 아니에요.',
-  body:jobs().map((j,i)=>`<button class="opt" data-act="pickJob" data-i="${i}"><span class="em">${j.em}</span><span>${j.job}<small>월급 ${won(j.amount)} (${kor(j.amount)} 원)</small></span></button>`).join('')+`<button class="btn ghost sm" data-act="editJobs">✏️ 일터 이름·월급 고치기 (선생님)</button>`});
+  body:jobs().map((j,i)=>`<button class="opt" data-act="pickJob" data-i="${i}"><span class="em">${j.em}</span><span>${j.job}<small>월급 ${won(j.amount)} (${kor(j.amount)} 원)</small></span></button>`).join('')+`<button class="opt" data-act="customStart"><span class="em">✏️</span><span>직접 쓰기<small>내 직장 이름과 월급을 직접 써요</small></span></button><button class="btn ghost sm" data-act="editJobs">⚙️ 고르는 목록 고치기 (선생님)</button>`});
+SC.sal1c=()=>({title:'직장 이름과 월급 쓰기',back:'sal0',step:1,total:2,guide:'직장 이름을 쓰고, 한 달 월급을 숫자로 써요. 다 쓰면 다음을 눌러요.',
+  body:`<div class="card"><b>직장 이름</b>
+   <input type="text" data-f="cjob" maxlength="15" placeholder="예: 행복 빵집" value="${esc(F.cjob||'')}" autocomplete="off" style="margin:8px 0 14px">
+   <b>한 달 월급</b>
+   <input type="text" data-f="camt" inputmode="numeric" maxlength="10" placeholder="예: 800000" value="${esc(F.camt||'')}" autocomplete="off" style="margin-top:8px">
+   <div class="kor" style="text-align:center;color:var(--sub);font-weight:700;margin-top:8px">${korAmt(F.camt)}</div></div>
+  ${F.err?`<p class="err">${F.err}</p>`:''}
+  <button class="btn next" data-act="customJob">다음</button>`});
 SC.sal2=()=>({title:'월급 통장 확인',back:'sal1',step:2,total:2,guide:`${F.job.job} 일을 하고, 매달 ${won(F.job.amount)}을 내 통장으로 받아요. 맞으면 일 시작하기를 눌러요.`,
   body:rows([['일터',F.job.em+' '+F.job.job],['월급',won(F.job.amount)],['월급날','매달 25일'],['월급 받는 통장','내 연습통장']])
   +`<p class="tip">💡 월급은 내 이름으로 된 내 통장으로 받아요. 다른 사람 통장으로 받지 않아요.</p><button class="btn next" data-act="doSalary">일 시작하기</button>`});
@@ -428,6 +436,11 @@ const A={
    if(new Set(nw.map(j=>j.job)).size<nw.length){F.err='같은 이름의 일터가 있어요. 이름을 다르게 써 주세요.';render(false);return}
    const cur=S.salary?jobs().findIndex(j=>j.job===S.salary.job):-1,k=cur>=0?F.draft.findIndex(j=>j.orig===cur):-1;
    S.jobs=nw;if(k>=0)S.salary=nw[k];toast('저장했어요');F={};go('settings')},
+ customStart:()=>{F={cjob:S.salary?S.salary.job:'',camt:S.salary?String(S.salary.amount):''};go('sal1c')},
+ customJob:()=>{const job=String(F.cjob||'').replace(/[<>&"']/g,'').trim().slice(0,15),amount=Number(digits(F.camt));
+   if(!job)F.err='직장 이름을 써 주세요.';else if(!amount)F.err='월급을 숫자로 써 주세요.';else if(amount>99999999)F.err='월급이 너무 커요. 다시 써 주세요.';
+   else{F.err='';F.job={job,em:(S.salary&&S.salary.job===job&&S.salary.em)||'💼',amount};go('sal2');return}
+   render(false);speak(F.err)},
  pickJob:d=>{F.job=jobs()[d.i];go('sal2')},
  doSalary:()=>{S.salary=F.job;emit({type:'salarySet'});go('sal3')},
  pickBill:d=>{F.bill=BILLS[d.i];go('ap2')},
@@ -442,6 +455,7 @@ const A={
 };
 app.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(!b||b.disabled)return;const f=A[b.dataset.act];if(f){f(b.dataset);save()}});
 app.addEventListener('input',e=>{const f=e.target.dataset.f;if(f)F[f]=e.target.value;
+  if(f==='camt'){const k=e.target.parentNode.querySelector('.kor');if(k)k.textContent=korAmt(e.target.value)}
   const jf=e.target.dataset.jf;if(jf&&F.draft){F.draft[e.target.dataset.i][jf]=e.target.value;if(jf==='amount'){const k=e.target.parentNode.querySelector('.kor');if(k)k.textContent=korAmt(e.target.value)}}});
 render(false);
 </script>
