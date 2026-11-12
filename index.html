@@ -142,8 +142,8 @@ const SAV_RATE=0.03,DP_RATE=0.025;
 const MISSIONS=[
  {id:'m1',go:'open1',t:'내 계좌 만들기',test:e=>e.type==='open'},
  {id:'m2',go:'dep1',t:'내 통장에 10,000원 넣기',test:e=>e.type==='deposit'&&e.amount===10000},
- {id:'m3',go:'send1',t:'엄마에게 5,000원 보내기',test:e=>e.type==='send'&&e.nick==='엄마'&&e.amount===5000},
- {id:'m4',go:'send1',t:'계좌번호를 직접 써서 김민수(바다은행 2468-1357)에게 3,000원 보내기',test:e=>e.type==='send'&&e.name==='김민수'&&e.amount===3000&&e.direct},
+ {id:'m3',go:'send1',t:'엄마에게 5,000원 이체하기',test:e=>e.type==='send'&&e.nick==='엄마'&&e.amount===5000},
+ {id:'m4',go:'send1',t:'계좌번호를 직접 써서 김민수(바다은행 2468-1357)에게 3,000원 이체하기',test:e=>e.type==='send'&&e.name==='김민수'&&e.amount===3000&&e.direct},
  {id:'m5',go:'hist',t:'거래 내역 확인하기',test:e=>e.type==='hist'},
  {id:'m6',go:'sav0',t:'매달 10,000원씩 6개월 적금 만들기',test:e=>e.type==='saving'&&e.amount===10000&&e.months===6},
  {id:'m7',go:'dp0',t:'30,000원을 12개월 예금에 맡기기',test:e=>e.type==='fixed'&&e.amount===30000&&e.months===12},
@@ -195,7 +195,7 @@ const dpInterest=(a,n)=>Math.floor(a*DP_RATE*n/12);
 const SC={};
 SC.home=()=>{
   if(!S.account)return{title:'연습은행',guide:'안녕하세요! 먼저 내 계좌를 만들어 볼까요? 노란색으로 반짝이는 단추를 눌러요.',
-    body:`<div class="hero"><div class="big">🏦</div><h2>은행 앱 연습하기</h2><p>계좌 만들기, 돈 넣기, 돈 보내기,<br>적금과 예금을 연습해요.</p></div>
+    body:`<div class="hero"><div class="big">🏦</div><h2>은행 앱 연습하기</h2><p>계좌 만들기, 돈 넣기, 이체하기,<br>적금과 예금을 연습해요.</p></div>
     <button class="btn next" data-act="start" data-to="open1">계좌 만들기</button>
     <button class="btn ghost sm" data-act="start" data-to="settings">⚙️ 설정 (선생님)</button>`};
   const m=nextMission(),hl=k=>m&&m.go===k?'next':'';
@@ -203,7 +203,7 @@ SC.home=()=>{
   return{title:'연습은행',guide:m?`미션이에요. ${m.t}`:'미션을 모두 끝냈어요! 하고 싶은 연습을 골라요.',
     body:`<div class="card bal"><div class="sm">${esc(S.name)} 님의 연습통장</div><div class="sm">연습은행 ${S.account.no}</div>
     <div class="money">${won(S.account.balance)}</div>
-    <div class="row2"><button class="btn white ${hl('dep1')}" data-act="start" data-to="dep1">💰 돈 넣기</button><button class="btn white ${hl('send1')}" data-act="start" data-to="send1">📤 돈 보내기</button></div></div>
+    <div class="row2"><button class="btn white ${hl('dep1')}" data-act="start" data-to="dep1">💰 돈 넣기</button><button class="btn white ${hl('send1')}" data-act="start" data-to="send1">📤 이체하기</button></div></div>
     <div class="grid">${tile('sav0','🐷','적금 만들기')}${tile('dp0','🔒','예금 만들기')}${tile('sal0','💼','월급 받기')}${tile('ap0','📱','자동납부')}${tile('month','⏩','한 달 뒤로 가기')}${tile('hist','📒','거래 내역')}${tile('prods','📂','내 적금·예금')}${tile('missions','⭐','미션 보기')}${tile('quiz','🛡️','안전 퀴즈')}</div>
     <button class="btn ghost sm" data-act="start" data-to="settings">⚙️ 설정 (선생님)</button>`}};
 
@@ -236,8 +236,8 @@ SC.dep2=()=>({title:'돈 넣기 확인',back:'dep1',step:2,total:3,guide:`내 �
 SC.dep3=()=>({title:'돈 넣기 끝',guide:`${won(F.amount)}을 넣었어요. 지금 내 돈은 ${won(S.account.balance)}이에요.`,
   body:doneUI('돈을 넣었어요!',[`넣은 돈 <b>${won(F.amount)}</b>`,`지금 내 돈 <b>${won(S.account.balance)}</b>`])});
 
-// --- 돈 보내기 ---
-SC.send1=()=>({title:'누구에게 보낼까요?',back:'home',step:1,total:5,guide:'돈을 받을 사람을 골라요. 모르는 사람에게는 보내지 않아요.',
+// --- 이체하기 ---
+SC.send1=()=>({title:'누구에게 이체할까요?',back:'home',step:1,total:5,guide:'이체는 내 통장의 돈을 다른 사람 통장으로 보내는 것이에요. 돈을 받을 사람을 골라요. 모르는 사람에게는 이체하지 않아요.',
   body:PEOPLE.map((p,i)=>`<button class="opt" data-act="toPerson" data-i="${i}"><span class="em">${p.em}</span><span>${p.nick}<small>${p.name} · ${p.bank} ${p.no}</small></span></button>`).join('')
   +`<button class="btn ghost" data-act="start2" data-to="send1b">⌨️ 계좌번호 직접 쓰기</button>`});
 SC.send1b=()=>({title:'계좌번호 쓰기',back:'send1',step:1,total:5,guide:F.found?`받는 사람은 ${F.to.name} 님이에요. 맞으면 다음을 눌러요.`:'은행을 고르고, 계좌번호 숫자를 써요. 그리고 찾기를 눌러요.',
@@ -247,14 +247,14 @@ SC.send1b=()=>({title:'계좌번호 쓰기',back:'send1',step:1,total:5,guide:F.
   ${F.found?`<div class="card" style="text-align:center">받는 사람<br><b style="font-size:1.5rem">${F.to.name} 님</b></div>${nextBtn('send2','맞아요, 다음')}<button class="btn ghost sm" data-act="unfind">다시 쓰기</button>`
   :`<button class="btn next" data-act="lookup">찾기</button>`}`});
 SC.send2=()=>{const a=F.amount||0,err=a>S.account.balance?`내 돈이 부족해요. 지금 내 돈은 ${won(S.account.balance)}이에요.`:'';
-  return{title:'얼마를 보낼까요?',back:'send1',step:2,total:5,guide:`${F.to.name} 님에게 보낼 돈을 눌러요.`,
+  return{title:'얼마를 이체할까요?',back:'send1',step:2,total:5,guide:`${F.to.name} 님에게 이체할 돈을 눌러요.`,
   body:`<p class="tip">받는 사람: <b>${F.to.name}</b> (${F.to.bank}) · 내 돈: <b>${won(S.account.balance)}</b></p>`+amountUI(err)+nextBtn('send3','다음',!a||!!err)}};
-SC.send3=()=>({title:'보내기 전에 확인',back:'send2',step:3,total:5,guide:`${F.to.name} 님에게 ${won(F.amount)}을 보내요. 이름과 돈이 맞는지 꼭 확인해요.`,
-  body:rows([['받는 사람',F.to.name+' 님'],['은행',F.to.bank],['계좌번호',F.to.no],['보내는 돈',won(F.amount)]])
-  +`<p class="tip">⚠️ 잘못 보낸 돈은 돌려받기 어려워요.</p>${nextBtn('send4','맞아요, 보내기')}<button class="btn ghost" data-act="go" data-to="send1">아니에요, 다시 하기</button>`});
+SC.send3=()=>({title:'이체하기 전에 확인',back:'send2',step:3,total:5,guide:`${F.to.name} 님에게 ${won(F.amount)}을 이체해요. 이름과 돈이 맞는지 꼭 확인해요.`,
+  body:rows([['받는 사람',F.to.name+' 님'],['은행',F.to.bank],['계좌번호',F.to.no],['이체하는 돈',won(F.amount)]])
+  +`<p class="tip">⚠️ 잘못 이체한 돈은 돌려받기 어려워요.</p>${nextBtn('send4','맞아요, 이체하기')}<button class="btn ghost" data-act="go" data-to="send1">아니에요, 다시 하기</button>`});
 SC.send4=()=>({title:'비밀번호',back:'send3',step:4,total:5,guide:'내 비밀번호 숫자 4개를 눌러요.',body:pinUI()});
-SC.send5=()=>({title:'보내기 끝',guide:`${F.to.name} 님에게 ${won(F.amount)}을 보냈어요.`,
-  body:doneUI('돈을 보냈어요!',[`<b>${F.to.name}</b> 님에게 <b>${won(F.amount)}</b>`,`남은 내 돈 <b>${won(S.account.balance)}</b>`])});
+SC.send5=()=>({title:'이체 끝',guide:`${F.to.name} 님에게 ${won(F.amount)}을 이체했어요.`,
+  body:doneUI('이체했어요!',[`<b>${F.to.name}</b> 님에게 <b>${won(F.amount)}</b>`,`남은 내 돈 <b>${won(S.account.balance)}</b>`])});
 
 // --- 적금 ---
 SC.sav0=()=>({title:'적금이 뭐예요?',back:'home',guide:'적금은 매달 조금씩 돈을 모으는 통장이에요. 끝까지 모으면 은행이 이자를 더 줘요.',
@@ -423,7 +423,7 @@ const PIN_DONE={
  open4:p=>{if(/^(\d)\1{3}$/.test(p)||p==='1234'||p==='4321'){F.pinMsg='너무 쉬운 숫자예요. 다른 숫자로 해요.';render(false);speak(F.pinMsg)}else{F.newPin=p;F.pinMsg='';go('open5')}},
  open5:p=>{if(p!==F.newPin){F.pinMsg='처음 숫자와 달라요. 처음부터 다시 만들어요.';go('open4',false);speak(F.pinMsg)}
    else{S.name=F.name;S.account={no:'1004-'+rnd(4)+'-'+rnd(4),pin:p,balance:0};emit({type:'open'});go('open6')}},
- send4:p=>auth(p,()=>{S.account.balance-=F.amount;hist('보내기',F.to.name+' 님에게 보냄',-F.amount);emit({type:'send',nick:F.to.nick,name:F.to.name,amount:F.amount,direct:!!F.direct});go('send5')}),
+ send4:p=>auth(p,()=>{S.account.balance-=F.amount;hist('이체',F.to.name+' 님에게 이체',-F.amount);emit({type:'send',nick:F.to.nick,name:F.to.name,amount:F.amount,direct:!!F.direct});go('send5')}),
  sav5:p=>auth(p,()=>{S.account.balance-=F.amount;S.products.push({id:Date.now(),type:'적금',amount:F.amount,months:F.months,day:F.day,paid:1,elapsed:0});hist('적금','적금 첫 번째 넣기',-F.amount);emit({type:'saving',amount:F.amount,months:F.months});go('sav6')}),
  dp4:p=>auth(p,()=>{S.account.balance-=F.amount;S.products.push({id:Date.now(),type:'예금',amount:F.amount,months:F.months,paid:1,elapsed:0});hist('예금','예금에 맡기기',-F.amount);emit({type:'fixed',amount:F.amount,months:F.months});go('dp5')})
 };
