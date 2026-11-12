@@ -31,6 +31,7 @@ main{padding:16px;display:flex;flex-direction:column;gap:12px;flex:1}
 .btn:disabled{background:#b9c4c1;cursor:not-allowed}
 .btn.ghost{background:var(--card);color:var(--tx);border:2px solid var(--line)}
 .btn.white{background:#fff;color:var(--pri-d);min-height:56px;font-size:1.05rem}
+.btn.ghost:disabled{opacity:.4}
 .btn.red{background:var(--err)}
 .btn.sm{min-height:48px;font-size:.95rem}
 body.hint-on .next:not(:disabled){animation:pulse 1.2s infinite;outline:4px solid var(--acc)}
@@ -181,7 +182,8 @@ const QUIZ=[
  {q:'아는 형이 "네 통장이랑 카드를 빌려주면 돈을 줄게"라고 해요. 어떻게 할까요?',a:['빌려주지 않는다','빌려준다'],ok:0,why:'내 통장과 카드는 절대 빌려주지 않아요. 빌려주면 나도 벌을 받을 수 있어요.'}
 ];
 const nextMission=()=>MISSIONS.find(m=>!S.done[m.id]);
-function emit(ev){MISSIONS.forEach(m=>{if(!S.done[m.id]&&m===nextMission()&&m.test(ev)){S.done[m.id]=true;toast('⭐ 미션 성공! '+m.t)}});save()}
+function emit(ev){const m=nextMission();if(m&&m.test(ev)){S.done[m.id]=true;toast('⭐ 미션 '+(MISSIONS.indexOf(m)+1)+' 성공! '+m.t)}
+  let n;while((n=nextMission())&&n.have&&n.have())S.done[n.id]=true;save()}
 
 // ===== 화면 틀 =====
 function page(c){
@@ -191,7 +193,7 @@ function page(c){
   <h1>${c.title}</h1><button class="icon" data-act="speak" aria-label="다시 듣기">🔊</button></header>
   ${c.total?`<div class="prog">${Array.from({length:c.total},(_,i)=>`<span class="${i<c.step?'on':''}"></span>`).join('')}</div>`:''}
   ${V==='home'?`<div style="padding:12px 16px 0;display:flex;justify-content:flex-end"><button class="chip ${S.settings.voice?'on':''}" data-act="sound" aria-pressed="${!!S.settings.voice}">${S.settings.voice?'🔊 소리 켜짐':'🔇 소리 꺼짐'}</button></div>`:''}
-  ${m?`<div class="mis">⭐ 미션: ${m.t}</div>`:''}
+  ${m?`<div class="mis">⭐ 미션 ${MISSIONS.indexOf(m)+1}: ${m.t}</div>`:''}
   ${c.guide?`<div class="guide"><div class="face">🐻</div><p>${c.guide}</p></div>`:''}
   <main>${c.body}</main>`}
 function render(sp=true){const c=SC[V]();document.body.classList.toggle('hint-on',!!S.settings.hint);app.innerHTML=page(c);lastGuide=c.guide||c.title;if(sp)speak(lastGuide)}
@@ -418,10 +420,12 @@ SC.close1=()=>{const p=S.products.find(x=>x.id===F.closeId),back=p.type==='적�
   body:rows([['종류',p.type],['돌려받는 돈',won(back)],['이자','0원 (못 받아요)']])+`<button class="btn ghost next" data-act="go" data-to="prods">아니요, 계속 모을래요</button><button class="btn red" data-act="doClose">네, 그만둘래요</button>`}};
 
 // --- 미션 / 퀴즈 / 설정 ---
-SC.missions=()=>{const n=MISSIONS.filter(m=>S.done[m.id]).length,cur=nextMission();
-  return{title:'미션',back:'home',guide:`미션 ${MISSIONS.length}개 중에 ${n}개를 성공했어요.`,
-  body:`<div class="card" style="text-align:center;font-size:1.5rem">${'⭐'.repeat(n)}${'☆'.repeat(MISSIONS.length-n)}</div>`
-  +MISSIONS.map((m,i)=>`<div class="hi" style="${m===cur?'border:3px solid var(--acc)':''}"><div>${i+1}. ${m.t}<small>${S.done[m.id]?'성공!':m===cur?'지금 할 미션':'다음에 해요'}</small></div><div style="font-size:1.5rem">${S.done[m.id]?'✅':m===cur?'👉':'🔒'}</div></div>`).join('')
+const misPage=()=>{const cur=nextMission(),ci=cur?MISSIONS.indexOf(cur):MISSIONS.length-1;return F.mp!=null?F.mp:Math.floor(ci/10)};
+SC.missions=()=>{const tot=MISSIONS.length,n=MISSIONS.filter(m=>S.done[m.id]).length,cur=nextMission(),pg=misPage(),pages=Math.ceil(tot/10);
+  return{title:'미션',back:'home',guide:`미션 ${tot}개 중에 ${n}개를 성공했어요.`,
+  body:`<div class="card" style="text-align:center"><b style="font-size:1.4rem">⭐ ${n} / ${tot}</b><div class="bar"><i style="width:${n/tot*100}%"></i></div></div>
+  <div style="display:flex;gap:8px;align-items:center"><button class="btn ghost sm" data-act="mpage" data-v="-1" ${pg<=0?'disabled':''}>◀ 앞</button><b style="white-space:nowrap">${pg+1}단계 / ${pages}단계</b><button class="btn ghost sm" data-act="mpage" data-v="1" ${pg>=pages-1?'disabled':''}>뒤 ▶</button></div>`
+  +MISSIONS.slice(pg*10,pg*10+10).map((m,k)=>`<div class="hi" style="${m===cur?'border:3px solid var(--acc)':''}"><div>${pg*10+k+1}. ${m.t}<small>${S.done[m.id]?'성공!':m===cur?'지금 할 미션':'다음에 해요'}</small></div><div style="font-size:1.5rem">${S.done[m.id]?'✅':m===cur?'👉':'🔒'}</div></div>`).join('')
   +(cur&&S.account?`<button class="btn next" data-act="start" data-to="${cur.go}">지금 미션 하러 가기</button>`:'')}};
 SC.quiz=()=>{const i=F.q||0,q=QUIZ[i];return{title:'안전 퀴즈',back:'home',step:i+1,total:QUIZ.length,guide:q.q,
   body:q.a.map((a,k)=>`<button class="opt" data-act="ans" data-i="${k}"><span class="em">${k?'②':'①'}</span><span>${a}</span></button>`).join('')+(F.qMsg?`<p class="err">${F.qMsg}</p>`:'')}};
@@ -462,7 +466,7 @@ SC.reset1=()=>{const b=F.rb||'settings';return{title:'초기화',back:b,guide:'�
 
 // ===== 동작 =====
 function auth(p,ok){if(p===S.account.pin){F.pinFail=0;F.pinMsg='';ok()}else{F.pinFail=(F.pinFail||0)+1;F.pinMsg='비밀번호가 달라요. 다시 눌러 보세요.';render(false);speak(F.pinMsg)}}
-function runMonth(){S.month++;const msgs=[];let paid=0;
+function runMonth(){S.month++;const msgs=[];let paid=0,mat=0;
   if(S.salary){S.account.balance+=S.salary.amount;hist('월급',S.salary.job+' 월급',S.salary.amount);msgs.push(`💼 월급 ${won(S.salary.amount)}이 들어왔어요!`)}
   S.autopays.forEach(a=>{
     if(S.account.balance>=a.amount){S.account.balance-=a.amount;paid++;hist('자동납부',a.name+' 자동납부',-a.amount);msgs.push(`${a.em} ${a.name} ${won(a.amount)}이 저절로 나갔어요.`)}
@@ -472,11 +476,11 @@ function runMonth(){S.month++;const msgs=[];let paid=0;
       if(S.account.balance>=p.amount){S.account.balance-=p.amount;p.paid++;hist('적금','적금 자동이체',-p.amount);msgs.push(`🐷 적금 ${won(p.amount)}이 저절로 나갔어요.`)}
       else msgs.push(`⚠️ 내 돈이 부족해서 이번 달 적금 ${won(p.amount)}을 넣지 못했어요.`)}
     if(p.elapsed>=p.months){const pr=p.type==='적금'?p.amount*p.paid:p.amount,it=p.type==='적금'?savInterest(p.amount,p.paid):dpInterest(p.amount,p.months);
-      p.end='만기';p.paidOut=pr+it;S.account.balance+=pr+it;hist(p.type,p.type+' 만기 (이자 '+won(it)+')',pr+it);msgs.push(`🎉 ${p.type}이 끝났어요! ${won(pr)} + 이자 ${won(it)}을 받았어요.`)}});
+      p.end='만기';mat++;p.paidOut=pr+it;S.account.balance+=pr+it;hist(p.type,p.type+' 만기 (이자 '+won(it)+')',pr+it);msgs.push(`🎉 ${p.type}이 끝났어요! ${won(pr)} + 이자 ${won(it)}을 받았어요.`)}});
   if(!msgs.length)msgs.push('한 달이 지났어요. 아무 일도 없었어요.');
-  emit({type:'month',salary:!!S.salary,paid});return msgs}
+  emit({type:'month',salary:!!S.salary,paid,matured:mat});return msgs}
 const PIN_DONE={
- ap4:p=>auth(p,()=>{S.autopays.push({id:Date.now(),name:F.bill.name,em:F.bill.em,amount:F.bill.amount,day:F.day});emit({type:'autopay',name:F.bill.name});go('ap5')}),
+ ap4:p=>auth(p,()=>{S.autopays.push({id:Date.now(),name:F.bill.name,em:F.bill.em,amount:F.bill.amount,day:F.day});emit({type:'autopay',name:F.bill.name,amount:F.bill.amount});go('ap5')}),
  open4:p=>{if(/^(\d)\1{3}$/.test(p)||p==='1234'||p==='4321'){F.pinMsg='너무 쉬운 숫자예요. 다른 숫자로 해요.';render(false);speak(F.pinMsg)}else{F.newPin=p;F.pinMsg='';go('open5')}},
  open5:p=>{if(p!==F.newPin){F.pinMsg='처음 숫자와 달라요. 처음부터 다시 만들어요.';go('open4',false);speak(F.pinMsg)}
    else{S.name=F.name;S.account={no:'1004-'+rnd(4)+'-'+rnd(4),pin:p,balance:0};emit({type:'open'});go('open6')}},
@@ -492,7 +496,7 @@ const A={
  key:d=>{let a=F.amount||0;a=d.k==='←'?Math.floor(a/10):Math.min(Number(String(a)+d.k),99999999);F.amount=a;render(false)},
  add:d=>{F.amount=Math.min((F.amount||0)+Number(d.v),99999999);render(false)},
  clear:()=>{F.amount=0;render(false)},
- pick:d=>{F[d.f]=/^\d+$/.test(d.v)?Number(d.v):d.v;if(d.f==='bank'){F.found=false;F.err=''}d.to?go(d.to):render(false)},
+ pick:d=>{F[d.f]=/^\d+$/.test(d.v)?Number(d.v):d.v;if(d.f==='bank'){F.found=false;F.err=''}if(d.f==='hp')emit({type:'histp',hp:String(d.v)});if(d.f==='ht')emit({type:'histt',ht:String(d.v)});d.to?go(d.to):render(false)},
  tog:d=>{F[d.f]=!F[d.f];render(false)},
  togAll:()=>{const v=!(F.t1&&F.t2&&F.t3);F.t1=F.t2=F.t3=v;render(false)},
  nameNext:()=>{F.name=(F.name||'').trim();if(!F.name){F.err='이름을 써 주세요.';render(false);speak(F.err)}else{F.err='';go('open2')}},
@@ -505,7 +509,7 @@ const A={
    else{const p=all().find(x=>x.bank===F.bank&&digits(x.no)===no);if(p){F.to=p;F.direct=true;F.found=true;F.err='';F.amount=0;render();return}
      F.err=all().some(x=>digits(x.no)===no)?`이 계좌번호는 ${F.bank}에 없어요. 은행을 다시 골라요.`:'없는 계좌예요. 숫자를 다시 확인해요.'}
    F.found=false;render(false);speak(F.err)},
- directStart:()=>{const m=nextMission();F={sample:m&&m.id==='m4'?2:Math.floor(Math.random()*all().length)};go('send1b')},
+ directStart:()=>{const m=nextMission();F={sample:m&&m.acct!=null?PEOPLE.length+m.acct:m&&m.id==='m4'?2:Math.floor(Math.random()*all().length)};go('send1b')},
  shuffle:()=>{let i;do{i=Math.floor(Math.random()*all().length)}while(i===F.sample);F.sample=i;F.err='';render(false)},
  sample:d=>{F.sample=Number(d.i);F.found=false;F.accno='';F.bank='';F.err='';go('send1b')},
  print:()=>{try{window.print()}catch(e){}},
@@ -544,12 +548,13 @@ const A={
    if(new Set(nw.map(p=>p.nick)).size<nw.length){F.err='부르는 이름이 같은 사람이 있어요. 다르게 써 주세요.';render(false);speak(F.err);return}
    S.contacts=nw;toast('저장했어요');const rb=F.rb||'settings';F={};go(rb)},
  sound:()=>{S.settings.voice=!S.settings.voice;save();render(false);if(S.settings.voice)speak('소리를 켰어요. 이제 안내를 읽어 줘요.');else{try{speechSynthesis.cancel()}catch(e){}toast('🔇 소리를 껐어요')}},
+ mpage:d=>{F.mp=Math.max(0,Math.min(Math.ceil(MISSIONS.length/10)-1,misPage()+Number(d.v)));render(false)},
  pickJob:d=>{F.job=jobs()[d.i];go('sal2')},
- doSalary:()=>{S.salary=F.job;emit({type:'salarySet'});go('sal3')},
+ doSalary:()=>{S.salary=F.job;emit({type:'salarySet',amount:F.job.amount});go('sal3')},
  pickBill:d=>{F.bill=BILLS[d.i];go('ap2')},
- apStop:d=>{S.autopays=S.autopays.filter(a=>a.id!==Number(d.id));toast('자동납부를 그만뒀어요');render(false)},
+ apStop:d=>{S.autopays=S.autopays.filter(a=>a.id!==Number(d.id));toast('자동납부를 그만뒀어요');emit({type:'apstop'});render(false)},
  closeAsk:d=>{F.closeId=Number(d.id);go('close1')},
- doClose:()=>{const p=S.products.find(x=>x.id===F.closeId),back=p.type==='적금'?p.amount*p.paid:p.amount;p.end='해지';p.paidOut=back;S.account.balance+=back;hist(p.type,p.type+' 그만두기 (해지)',back);save();F={msgs:[`✋ ${p.type}을 그만두고 ${won(back)}을 돌려받았어요. 이자는 받지 못했어요.`]};go('prods')},
+ doClose:()=>{const p=S.products.find(x=>x.id===F.closeId),back=p.type==='적금'?p.amount*p.paid:p.amount;p.end='해지';p.paidOut=back;S.account.balance+=back;hist(p.type,p.type+' 그만두기 (해지)',back);emit({type:'close'});F={msgs:[`✋ ${p.type}을 그만두고 ${won(back)}을 돌려받았어요. 이자는 받지 못했어요.`]};go('prods')},
  ans:d=>{const q=QUIZ[F.q||0];if(Number(d.i)===q.ok){F.qMsg='';go('quizOk')}else{F.qMsg='다시 생각해 봐요. '+q.why;render(false);speak(F.qMsg)}},
  quizNext:()=>{F.q=(F.q||0)+1;if(F.q>=QUIZ.length){emit({type:'quiz'});go('quizDone')}else go('quiz')},
  set:d=>{S.settings[d.f]=!S.settings[d.f];save();render(false)},
@@ -562,6 +567,33 @@ app.addEventListener('input',e=>{const f=e.target.dataset.f;if(f)F[f]=e.target.v
   const jf=e.target.dataset.jf;if(jf&&F.draft){F.draft[e.target.dataset.i][jf]=e.target.value;if(jf==='amount'){const k=e.target.parentNode.querySelector('.kor');if(k)k.textContent=korAmt(e.target.value)}}});
 app.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.f==='accno'){e.preventDefault();F.accno=e.target.value;A.lookup();save()}});
 app.addEventListener('change',e=>{const f=e.target.dataset&&e.target.dataset.rf;if(f){F[f]=e.target.value;render(false)}});
+// ===== 미션 12 ~ 100 =====
+(function(){
+  const D=a=>({go:'dep1',t:`내 통장에 ${won(a)} 넣기`,test:e=>e.type==='deposit'&&e.amount===a,sim:['D',a]});
+  const P=(i,a)=>({go:'send1',get t(){return `${people()[i].nick}에게 ${won(a)} 이체하기`},test:e=>e.type==='send'&&e.no===PEOPLE[i].no&&e.amount===a,sim:['P',i,a]});
+  const X=(k,a)=>{const p=ACCTS[k];return{go:'send1',acct:k,t:`계좌번호를 직접 써서 ${p.name}(${p.bank} ${p.no})에게 ${won(a)} 이체하기`,test:e=>e.type==='send'&&e.no===p.no&&e.amount===a&&e.direct,sim:['X',k,a]}};
+  const SV=(a,n)=>({go:'sav0',t:`매달 ${won(a)}씩 ${perLabel(n)} 적금 만들기`,test:e=>e.type==='saving'&&e.amount===a&&e.months===n,sim:['SV',a,n]});
+  const FX=(a,n)=>({go:'dp0',t:`${won(a)}을 ${n}개월 예금에 맡기기`,test:e=>e.type==='fixed'&&e.amount===a&&e.months===n,sim:['FX',a,n]});
+  const AP=i=>{const b=BILLS[i];return{go:'ap0',t:`${b.name} 자동납부 신청하기`,test:e=>e.type==='autopay'&&e.name===b.name,have:()=>S.autopays.some(x=>x.name===b.name),sim:['AP',i]}};
+  const APC=(name,a)=>({go:'ap0',t:`자동납부 '직접 쓰기'로 ${name} ${won(a)} 신청하기`,test:e=>e.type==='autopay'&&e.name===name&&e.amount===a,have:()=>S.autopays.some(x=>x.name===name&&x.amount===a),sim:['APC',name,a]});
+  const HP=(v,l)=>({go:'hist',t:`거래 내역에서 기간 '${l}' 눌러 보기`,test:e=>e.type==='histp'&&e.hp===v,sim:['HP',v]});
+  const HT=(v,l)=>({go:'hist',t:`거래 내역에서 종류 '${l}' 눌러 보기`,test:e=>e.type==='histt'&&e.ht===v,sim:['HT',v]});
+  const SAL=a=>({go:'sal0',t:`월급 받기에서 월급을 ${won(a)}으로 고치기`,test:e=>e.type==='salarySet'&&e.amount===a,sim:['SAL',a]});
+  const MO=()=>({go:'month',t:'한 달 뒤로 가기를 눌러서 무슨 일이 생기는지 보기',test:e=>e.type==='month',sim:['MO']});
+  const MOS=()=>({go:'month',t:'한 달 뒤로 가서 월급이 들어오는 것 확인하기',test:e=>e.type==='month'&&e.salary,sim:['MO']});
+  const MOM=()=>({go:'month',t:'한 달 뒤로 가서 적금이 끝나는 것(만기) 확인하기',test:e=>e.type==='month'&&e.matured>0,sim:['MO']});
+  const CL=()=>({go:'prods',t:'내 적금·예금에서 하나를 그만두기(해지) 해 보기 (없으면 먼저 만들어요)',test:e=>e.type==='close',sim:['CL']});
+  const AS=()=>({go:'ap0',t:'자동납부 하나를 그만두기 (없으면 먼저 신청해요)',test:e=>e.type==='apstop',sim:['AS']});
+  const QZ=()=>({go:'quiz',t:'안전 퀴즈를 다시 모두 맞히기',test:e=>e.type==='quiz',sim:['QZ']});
+  const list=[D(5000),P(1,2000),HP('3','3개월'),X(0,1000),SV(5000,1),MOM(),AP(1),D(20000),P(3,3000)];
+  const dA=[30000,7000,15000,50000,12000,100000,25000,8500],pA=[1500,4000,2500,6000,3500,10000,7500,12000],xA=[2000,5000,1200,8000,3300,15000,4500,9900];
+  const sA=[10000,20000,3000,50000,15000,30000,7000,100000],sM=[3,12,2,24,9,18,5,36],fA=[10000,20000,50000,15000,100000,30000,70000,200000],fM=[3,6,12,3,6,12,3,12];
+  const x2=[1000,2500,4000,6500,1800,7200,5500,3000],p2=[800,2200,5500,1300,9000,4700,6600,20000];
+  const sp1=[()=>HT('in','들어온 돈'),()=>SAL(900000),()=>AP(2),()=>HP('6','6개월'),()=>CL(),()=>AP(3),()=>HT('out','나간 돈'),()=>SAL(1500000)];
+  const sp2=[()=>QZ(),()=>HP('12','1년'),()=>APC('체육관 요금',30000),()=>AS(),()=>HP('all','전체'),()=>APC('수영장 요금',40000),()=>QZ(),()=>HP('custom','직접 정하기')];
+  for(let r=0;r<8;r++)list.push(D(dA[r]),P(r%5,pA[r]),X(r*3+1,xA[r]),SV(sA[r],sM[r]),FX(fA[r],fM[r]),sp1[r](),X(25+r*3,x2[r]),r%2?MOS():MO(),P((r+2)%5,p2[r]),sp2[r]());
+  list.forEach((m,i)=>{m.id='m'+(12+i);MISSIONS.push(m)});
+})();
 migrate();
 render(false);
 </script>
