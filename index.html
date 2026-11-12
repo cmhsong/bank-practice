@@ -267,8 +267,18 @@ SC.sav1=()=>{const b=S.account.balance;return{title:'매달 얼마씩?',back:'sa
 SC.sav1c=()=>{const a=F.amount||0,b=S.account.balance;const err=a>b?`내 돈이 부족해요. 지금 내 돈은 ${won(b)}이에요.`:(a>0&&a<1000?'1,000원부터 모을 수 있어요.':'');
   return{title:'매달 얼마씩? (직접 쓰기)',back:'sav1',step:1,total:5,guide:'매달 모을 돈을 숫자로 눌러요. 오늘 첫 번째 돈이 통장에서 나가요.',
   body:`<p class="tip">내 돈: <b>${won(b)}</b> · 1,000원부터 모을 수 있어요.</p>`+amountUI(err)+nextBtn('sav2','다음',!a||!!err)}};
-SC.sav2=()=>({title:'몇 달 동안?',back:'sav1',step:2,total:5,guide:'몇 달 동안 모을지 골라요.',
-  body:[6,12,24].map(n=>opt('months',n,'sav3','📅',n+'개월',`다 모으면 ${won(F.amount*n)} + 이자 ${won(savInterest(F.amount,n))}`)).join('')});
+const perLabel=n=>n<12?n+'개월':n%12?`${n}개월 (${Math.floor(n/12)}년 ${n%12}개월)`:`${n}개월 (${n/12}년)`;
+SC.sav2=()=>({title:'몇 달 동안?',back:'sav1',step:2,total:5,guide:'몇 달 동안 모을지 골라요. 1개월부터 3년까지 할 수 있어요.',
+  body:[1,6,12,24,36].map(n=>opt('months',n,'sav3','📅',perLabel(n),`다 모으면 ${won(F.amount*n)} + 이자 ${won(savInterest(F.amount,n))}`)).join('')
+  +`<button class="opt" data-act="go" data-to="sav2c"><span class="em">✏️</span><span>직접 쓰기<small>1개월부터 36개월(3년)까지 숫자로 눌러요</small></span></button>`});
+SC.sav2c=()=>{const n=F.mon||0,err=n>36?'3년(36개월)까지 할 수 있어요.':'';
+  return{title:'몇 달 동안? (직접 쓰기)',back:'sav2',step:2,total:5,guide:'모을 기간을 숫자로 눌러요. 1개월부터 36개월까지 할 수 있어요. 36개월은 3년이에요.',
+  body:`<div class="amt"><div class="num">${n}개월</div><div class="kor">${!n?'숫자를 눌러요':n>=12&&!err?perLabel(n):'1개월 ~ 36개월(3년)'}</div></div>
+  ${err?`<p class="err">${err}</p>`:''}
+  <div class="quick"><button data-act="madd" data-v="-1">− 1개월</button><button data-act="madd" data-v="1">+ 1개월</button></div>
+  <div class="pad">${[1,2,3,4,5,6,7,8,9,'',0,'←'].map(k=>k===''?'<span></span>':`<button data-act="mkey" data-k="${k}">${k}</button>`).join('')}</div>
+  ${n&&!err?`<p class="tip">다 모으면 <b>${won(F.amount*n)}</b> + 이자 <b>${won(savInterest(F.amount,n))}</b></p>`:''}
+  <button class="btn next" data-act="monSet" ${!n||err?'disabled':''}>다음</button>`}};
 SC.sav3=()=>({title:'매달 며칠에?',back:'sav2',step:3,total:5,guide:'매달 며칠에 돈이 나갈지 골라요. 그날 통장에서 저절로 나가요.',
   body:[1,10,25].map(d=>opt('day',d,'sav4','🗓️','매달 '+d+'일','자동이체: 저절로 돈이 옮겨져요')).join('')});
 SC.sav4=()=>{const i=savInterest(F.amount,F.months),p=F.amount*F.months;return{title:'적금 확인',back:'sav3',step:4,total:5,guide:`매달 ${won(F.amount)}씩 ${F.months}개월 동안 모아요. 맞으면 다음을 눌러요.`,
@@ -445,6 +455,9 @@ const A={
    if(!job)F.err='직장 이름을 써 주세요.';else if(!amount)F.err='월급을 숫자로 써 주세요.';else if(amount>99999999)F.err='월급이 너무 커요. 다시 써 주세요.';
    else{F.err='';F.job={job,em:(S.salary&&S.salary.job===job&&S.salary.em)||'💼',amount};go('sal2');return}
    render(false);speak(F.err)},
+ mkey:d=>{let n=F.mon||0;n=d.k==='←'?Math.floor(n/10):Math.min(Number(String(n)+d.k),999);F.mon=n;render(false)},
+ madd:d=>{F.mon=Math.max(0,Math.min(36,(F.mon||0)+Number(d.v)));render(false)},
+ monSet:()=>{F.months=F.mon;go('sav3')},
  pickJob:d=>{F.job=jobs()[d.i];go('sal2')},
  doSalary:()=>{S.salary=F.job;emit({type:'salarySet'});go('sal3')},
  pickBill:d=>{F.bill=BILLS[d.i];go('ap2')},
